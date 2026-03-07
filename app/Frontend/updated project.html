@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DREADLOCK | Cyber-Sentience Nexus</title>
+    <title>ThreatMind | Cyber-Sentience Nexus</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700&family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -19,20 +19,6 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
         
-    <script>
-    // Optional helper to pull recent logs from the backend
-    // (not auto‑called to avoid errors when backend is offline)
-    async function loadLogs() {
-        try {
-            const response = await fetch("http://127.0.0.1:8000/logs");
-            const data = await response.json();
-            console.log("Recent logs from backend:", data);
-        } catch (error) {
-            console.error("Error loading logs:", error);
-        }
-    }
-    </script>
-
         body {
             font-family: 'Inter', sans-serif;
             background: var(--bg-obsidian);
@@ -228,7 +214,7 @@
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
             </div>
-            <div class="matrix-text" data-value="DREADLOCK" style="font-family: 'Space Grotesk'; font-weight: 700; font-size: 1.2rem; letter-spacing: 2px;">
+            <div class="matrix-text" data-value="THREATMIND" style="font-family: 'Space Grotesk'; font-weight: 700; font-size: 1.2rem; letter-spacing: 2px;">
                 DREADLOCK
             </div>
         </div>
@@ -606,6 +592,7 @@
     
     <script>
         let mainChart, riskChart, vectorChart, geoChart, protocolChart, densityChart, endpointChart, uaChart, responseChart, bandwidthChart;
+        let dashboardStats = null;
 
         // --- 1. NEURAL LINK PARTICLE SYSTEM ---
         const canvas = document.getElementById('neural-canvas');
@@ -781,19 +768,43 @@
                 const response = await fetch('http://127.0.0.1:8000/logs');
                 const logs = await response.json();
 
-                const lines = logs.map(log => {
+                const events = logs.map(log => {
                     const timestamp = log.timestamp || 'unknown';
-                    const ip = log.ip || 'unknown';
-                    const action = log.action || '';
-                    const actionParts = action.split(' ');
-                    const method = actionParts[0] || 'N/A';
-                    const endpoint = actionParts[1] || '/';
-                    const status = actionParts[2] || (log.severity === 'HIGH' ? '403' : '200');
-                    const severity = log.severity || 'LOW';
-                    return `${timestamp} ${ip} ${method} ${endpoint} ${status} ${severity}`;
+                    const ip = log.ip || 'N/A';
+                    const severity = (log.severity || 'LOW').toUpperCase();
+
+                    let method = 'EVENT';
+                    let endpoint = '/';
+                    let status = severity;
+
+                    if (log.source === 'security') {
+                        // Windows Security CSV: keep multi-word fields intact.
+                        method = `EVT:${log.event_type || 'UNKNOWN'}`;
+                        endpoint = log.resource || 'SecurityEvent';
+                        status = log.action || severity; // action is "Level" for security CSV
+                    } else {
+                        // Web / firewall logs
+                        if (log.action) {
+                            const actionParts = String(log.action).split(' ');
+                            if (actionParts.length >= 2) {
+                                method = actionParts[0] || method;
+                                endpoint = actionParts[1] || endpoint;
+                                status = actionParts[2] || status;
+                            } else {
+                                method = String(log.event_type || 'EVENT').toUpperCase();
+                                status = severity;
+                            }
+                        } else {
+                            method = String(log.event_type || 'EVENT').toUpperCase();
+                            endpoint = log.resource || '/';
+                            status = severity;
+                        }
+                    }
+
+                    return { timestamp, ip, method, endpoint, status, severity };
                 });
 
-                renderDashboard(lines);
+                renderDashboard(events);
             } catch (error) {
                 console.error('Failed to load data from backend, dashboard will use local parsing instead.', error);
             }
@@ -852,18 +863,57 @@
             const tbody = document.getElementById('log-table-body');
             tbody.innerHTML = '';
             
-            data.forEach(line => {
+            let lowCount = 0;
+            let medCount = 0;
+            let critCount = 0;
+
+            const endpointHits = {};
+            const statusCounts = {};
+            const highRiskIps = new Set();
+
+            const rows = (Array.isArray(data) ? data : []).map(item => {
+                // Backend path: already structured objects
+                if (item && typeof item === 'object' && !Array.isArray(item)) return item;
+
+                // Demo/local fallback path: parse legacy string format
+                const line = String(item || '');
                 const parts = line.split(' ');
-                if(parts.length < 6) return;
-                
+                if (parts.length < 6) return null;
+
                 const timestamp = parts[0] + ' ' + parts[1];
                 const ip = parts[2];
                 const method = parts[3];
                 const endpoint = parts[4];
                 const status = parts[5];
-                const severity = parts[6] || (status === '403' || status === '500' ? 'CRITICAL' : 'LOW');
+                const sev = (parts[6] || ((status === '403' || status === '500') ? 'CRITICAL' : 'LOW')).toUpperCase();
+
+                return { timestamp, ip, method, endpoint, status, severity: sev };
+            }).filter(Boolean);
+
+            rows.forEach(row => {
+                const timestamp = row.timestamp || 'unknown';
+                const ip = row.ip || 'N/A';
+                const method = row.method || 'EVENT';
+                const endpoint = row.endpoint || '/';
+                const status = row.status || (row.severity || 'LOW');
+                const severity = (row.severity || 'LOW').toUpperCase();
                 
-                const color = severity === 'CRITICAL' ? '#ff003c' : (severity === 'MEDIUM' ? '#ffcc00' : '#00f2ff');
+                if (severity === 'CRITICAL' || severity === 'HIGH') {
+                    critCount++;
+                    if (ip !== 'N/A' && ip !== 'unknown') {
+                        highRiskIps.add(ip);
+                    }
+                }
+                else if (severity === 'MEDIUM') medCount++;
+                else lowCount++;
+
+                endpointHits[endpoint] = (endpointHits[endpoint] || 0) + 1;
+                statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+                const color =
+                    (severity === 'CRITICAL' || severity === 'HIGH')
+                        ? '#ff003c'
+                        : (severity === 'MEDIUM' ? '#ffcc00' : '#00f2ff');
                 
                 tbody.innerHTML += `
                     <tr style="border-bottom: 1px solid #111;">
@@ -877,15 +927,28 @@
                 `;
             });
             // Update Summary Metrics based on data
-            let total = data.length * 15432; // Simulating large volume
-            let critical = data.filter(l => l.includes('CRITICAL')).length * 112;
-            let blocked = Math.floor(critical * 0.157);
-            let health = 100 - (critical / total * 100);
-            
-            document.getElementById('stat-total-events').innerText = total.toLocaleString();
-            document.getElementById('stat-critical-threats').innerText = critical.toLocaleString();
-            document.getElementById('stat-blocked-ips').innerText = blocked.toLocaleString();
-            
+            const total = rows.length;
+            const critical = critCount;
+            const blocked = highRiskIps.size;
+            const health = total > 0 ? 100 - (critical / total * 100) : 100;
+
+            const totalEl = document.getElementById('stat-total-events');
+            const critEl = document.getElementById('stat-critical-threats');
+            const blockedEl = document.getElementById('stat-blocked-ips');
+
+            const totalStr = total.toLocaleString();
+            const critStr = critical.toLocaleString();
+            const blockedStr = blocked.toLocaleString();
+
+            totalEl.innerText = totalStr;
+            critEl.innerText = critStr;
+            blockedEl.innerText = blockedStr;
+
+            // Keep matrix animation consistent with live values
+            totalEl.setAttribute('data-value', totalStr);
+            critEl.setAttribute('data-value', critStr);
+            blockedEl.setAttribute('data-value', blockedStr);
+
             const healthEl = document.getElementById('stat-health');
             const healthPct = health.toFixed(1) + '%';
             if (health > 95) {
@@ -898,6 +961,31 @@
                 healthEl.innerHTML = `${healthPct} <small style="font-size: 0.6rem; opacity: 0.7; letter-spacing: 1px;">[ RISK ]</small>`;
                 healthEl.style.color = '#ff003c';
             }
+
+            // Prepare dynamic stats for charts
+            const bucketCount = Math.min(6, Math.max(1, Math.floor(rows.length / 3) || 1));
+            const trafficLabels = [];
+            const trafficValues = [];
+            for (let i = 0; i < bucketCount; i++) {
+                const start = Math.floor(i * rows.length / bucketCount);
+                const end = Math.floor((i + 1) * rows.length / bucketCount);
+                trafficLabels.push(`T${i + 1}`);
+                trafficValues.push(Math.max(1, end - start));
+            }
+
+            const topEndpoints = Object.entries(endpointHits)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            dashboardStats = {
+                severities: { low: lowCount, medium: medCount, critical: critCount },
+                traffic: { labels: trafficLabels, values: trafficValues },
+                endpoints: {
+                    labels: topEndpoints.map(e => e[0]),
+                    values: topEndpoints.map(e => e[1])
+                },
+                statuses: statusCounts
+            };
 
             initCharts();
             
@@ -938,20 +1026,24 @@
             if(responseChart) responseChart.destroy();
             if(bandwidthChart) bandwidthChart.destroy();
 
+            const trafficLabels = dashboardStats?.traffic.labels || ['T1','T2','T3','T4','T5','T6'];
+            const trafficValues = dashboardStats?.traffic.values || [120, 450, 1020, 330, 150, 480];
+
             mainChart = new Chart(ctxs[0], {
                 type: 'line',
                 data: {
-                    labels: ['10:00', '10:01', '10:02', '10:03', '10:04', '10:05'],
-                    datasets: [{ label: 'Events', data: [120, 450, 1020, 330, 150, 480], borderColor: '#ff003c', tension: 0.4, fill: true, backgroundColor: 'rgba(255, 0, 60, 0.05)' }]
+                    labels: trafficLabels,
+                    datasets: [{ label: 'Events', data: trafficValues, borderColor: '#ff003c', tension: 0.4, fill: true, backgroundColor: 'rgba(255, 0, 60, 0.05)' }]
                 },
                 options: chartOptions
             });
 
+            const sev = dashboardStats?.severities || { low: 65, medium: 25, critical: 10 };
             riskChart = new Chart(ctxs[1], {
                 type: 'doughnut',
                 data: {
-                    labels: ['Safe', 'Warning', 'Critical'],
-                    datasets: [{ data: [65, 25, 10], backgroundColor: ['#00f2ff', '#ffcc00', '#ff003c'], borderWidth: 0 }]
+                    labels: ['Low', 'Medium', 'Critical'],
+                    datasets: [{ data: [sev.low, sev.medium, sev.critical], backgroundColor: ['#00f2ff', '#ffcc00', '#ff003c'], borderWidth: 0 }]
                 },
                 options: doughnutOptions
             });
@@ -992,13 +1084,16 @@
                 options: chartOptions
             });
 
+            const epLabels = dashboardStats?.endpoints.labels || ['/login', '/auth', '/admin', '/uploads', '/.env'];
+            const epValues = dashboardStats?.endpoints.values || [720, 580, 440, 210, 150];
+
             endpointChart = new Chart(ctxs[6], {
                 type: 'radar',
                 data: {
-                    labels: ['/login', '/auth', '/admin', '/uploads', '/.env'],
+                    labels: epLabels,
                     datasets: [{ 
                         label: 'Target Intensity',
-                        data: [720, 580, 440, 210, 150], 
+                        data: epValues, 
                         backgroundColor: 'rgba(0, 242, 255, 0.2)',
                         borderColor: '#00f2ff',
                         pointBackgroundColor: '#ff003c',

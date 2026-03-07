@@ -1,12 +1,65 @@
 import re
 import json
+import csv
 from typing import List
 from app.models.event import LogEvent
 
 
 def parse_logs(raw_text: str) -> List[LogEvent]:
-    events = []
+    events: List[LogEvent] = []
     lines = raw_text.splitlines()
+
+    # ---------- WINDOWS SECURITY CSV EXPORT ----------
+    # Detect typical Event Viewer CSV exports which have an "Event ID" column.
+    if lines and "," in lines[0] and "Event ID" in lines[0]:
+        reader = csv.DictReader(lines)
+        for row in reader:
+            if not any(row.values()):
+                continue
+
+            timestamp = (
+                row.get("Date and Time")
+                or row.get("Date")
+                or row.get("TimeCreated")
+                or "unknown"
+            )
+            event_id = row.get("Event ID") or row.get("EventID") or "unknown"
+            level = row.get("Level") or row.get("Keywords") or "Info"
+            task = row.get("Task Category") or row.get("Task") or ""
+            user = row.get("Account Name") or row.get("User") or None
+            description = row.get("Description") or ""
+
+            # Try to pull a source IP from the description if present.
+            ip = None
+            m_ip = re.search(r"Source Network Address:\s*([\d\.]+)", description)
+            if m_ip:
+                ip = m_ip.group(1)
+
+            level_lower = level.lower()
+            if "fail" in level_lower:
+                severity = "HIGH"
+            elif "warn" in level_lower:
+                severity = "MEDIUM"
+            else:
+                severity = "LOW"
+
+            events.append(
+                LogEvent(
+                    timestamp=timestamp,
+                    source="security",
+                    event_type=str(event_id),
+                    severity=severity,
+                    user=user,
+                    ip=ip,
+                    # Store level ("Information", "Failure Audit", etc.) as action,
+                    # and Task Category ("Logon", "Account Management") as resource.
+                    action=level,
+                    resource=task or None,
+                    raw=json.dumps(row),
+                )
+            )
+
+        return events
 
     for line in lines:
         line = line.strip()
@@ -82,11 +135,42 @@ def parse_logs(raw_text: str) -> List[LogEvent]:
             ))
             continue
 
-        # ---------- FALLBACK ----------
+        # ---------- GENERIC WEB SECURITY LOGS ----------
+        # Example pattern (similar to your security log screenshot):
+        # 16/Feb/2026:10:17:33 +0000 192.168.1.200 POST /admin/login HTTP/1.1 HIGH
+        sec_match = re.match(
+            r"(\d{1,2}/[A-Za-z]{3}/\d{4}[:\s]\S+)\s+(\S+)\s+"
+            r"(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH)\s+(\S+)\s+(\S+)\s+(\w+)",
+            line,
+        )
+        if sec_match:
+            ts, ip, method, endpoint, proto_or_status, severity = sec_match.groups()
+            events.append(LogEvent(
+                timestamp=ts,
+                source="security",
+                event_type="http_request",
+                severity=severity.upper(),
+                ip=ip,
+                action=f"{method} {endpoint} {proto_or_status}",
+                resource=endpoint,
+                raw=line,
+            ))
+            continue
+
+        # ---------- FALLBACK (generic events, try to keep timestamp) ----------
+        timestamp = "unknown"
+        # ISO‑like: 2026-02-16 10:17:33
+        m = re.match(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", line)
+        if not m:
+            # Apache‑style date: 16/Feb/2026:10:17:33 +0000
+            m = re.match(r"(\d{1,2}/[A-Za-z]{3}/\d{4}[:\s]\S+)", line)
+        if m:
+            timestamp = m.group(1)
+
         events.append(LogEvent(
-            timestamp="unknown",
-            source="unknown",
-            event_type="unknown",
+            timestamp=timestamp,
+            source="generic",
+            event_type="event",
             severity="LOW",
             raw=line
         ))
