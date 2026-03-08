@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import os
 
 from app.api import logs, incidents
 from app.storage.database import engine
@@ -48,3 +51,19 @@ def oracle_chat(payload: ChatRequest):
             "Integrate a real AI model here for deeper analysis."
         )
     return {"reply": reply}
+
+
+# Serve the dashboard HTML
+@app.get("/dashboard")
+def serve_dashboard():
+    """Serve the main dashboard HTML file"""
+    html_path = os.path.join(os.path.dirname(__file__), "Frontend", "updated project.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+    return {"error": "Dashboard not found"}
+
+
+# Serve static frontend files
+frontend_path = os.path.join(os.path.dirname(__file__), "Frontend")
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
