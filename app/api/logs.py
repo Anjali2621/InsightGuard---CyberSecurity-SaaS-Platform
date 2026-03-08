@@ -9,7 +9,7 @@ from app.ingestion.parser import parse_logs
 router = APIRouter(prefix="/logs", tags=["Logs"])
 
 
-@router.post("/logs/upload")
+@router.post("/upload")
 async def upload_logs(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),

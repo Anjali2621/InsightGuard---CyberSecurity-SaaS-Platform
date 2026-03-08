@@ -11,18 +11,16 @@ from app.models.model import Base
 
 try:
     Base.metadata.create_all(bind=engine)
-    print("Database tables created successfully")
+    print("✅ Database tables created successfully")
 except Exception as e:
-    print(f"Error creating database tables: {e}")
+    print(f"❌ Error creating database tables: {e}")
 
 app = FastAPI(title="InsightGuard Backend")
 
 # Allow the dashboard (opened from file:// or localhost) to talk to the API.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-    "https://extraordinary-entremet-0f1664.netlify.app",  # Your Netlify URL
-    "*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,12 +28,27 @@ app.add_middleware(
 
 app.include_router(logs.router)
 app.include_router(incidents.router)
-print("Routers mounted successfully")
 
 
-@app.get("/test")
-def test_endpoint():
-    return {"message": "API is working!", "routes": ["GET /", "GET /logs", "POST /logs/upload", "GET /dashboard"]}
+@app.get("/")
+def healthcheck():
+    return {"status": "ok", "service": "InsightGuard Backend"}
+
+
+# Serve the dashboard HTML
+@app.get("/dashboard")
+def serve_dashboard():
+    """Serve the main dashboard HTML file"""
+    html_path = os.path.join(os.path.dirname(__file__), "Frontend", "index.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+    return {"error": "Dashboard not found"}
+
+
+# Serve static frontend files
+frontend_path = os.path.join(os.path.dirname(__file__), "Frontend")
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
 
 class ChatRequest(BaseModel):
@@ -58,6 +71,3 @@ def oracle_chat(payload: ChatRequest):
             "Integrate a real AI model here for deeper analysis."
         )
     return {"reply": reply}
-
-
-

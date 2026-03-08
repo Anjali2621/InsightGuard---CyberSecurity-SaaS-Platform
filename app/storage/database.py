@@ -3,20 +3,13 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 
 # Determine which database to use:
-# - On Railway: Use the DATABASE_URL environment variable (Railway sets this automatically)
-# - On Replit: Use Replit's database or fallback to SQLite
-# - Locally: Use your local PostgreSQL database
+# - Local Development: Use local PostgreSQL database
+# - Production (Railway/Replit): Use DATABASE_URL environment variable
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    # Check if we're on Replit (has REPLIT_DB_URL)
-    replit_db = os.getenv("REPLIT_DB_URL")
-    if replit_db:
-        DATABASE_URL = replit_db
-    else:
-        # Fallback to SQLite for local development or Replit
-        DATABASE_URL = "sqlite:///./insightguard.db"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:Sql2606%23@localhost:5432/InsightGuard"  # Your local PostgreSQL database
+)
 
 # Railway sometimes uses 'postgres://' but SQLAlchemy needs 'postgresql://'
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
