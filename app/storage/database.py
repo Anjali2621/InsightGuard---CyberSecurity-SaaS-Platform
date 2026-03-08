@@ -2,16 +2,27 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:GyyeMayEezRarihHVPCyxFlNeNmDBKlK@postgres.railway.internal:5432/railway")
+# Determine which database to use:
+# - On Railway: Use the DATABASE_URL environment variable (Railway sets this automatically)
+# - Locally: Use your local PostgreSQL database
 
-print(f"Database URL: {DATABASE_URL}")  # Debug logging
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:Sql2606%23@localhost:5432/InsightGuard"  # Your local database
+)
 
-# Add connection parameters for Railway
+# Railway sometimes uses 'postgres://' but SQLAlchemy needs 'postgresql://'
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+print(f"Database URL: {DATABASE_URL[:30]}...")  # Print only first 30 chars for security
+
+# Create database engine with connection pooling
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,  # Test connections before using them
-    pool_recycle=300,    # Recycle connections every 5 minutes
-    echo=False           # Set to True for SQL debugging
+    pool_pre_ping=True,      # Test connections before using them
+    pool_recycle=300,        # Recycle connections every 5 minutes
+    echo=False               # Set to True for SQL debugging
 )
 
 SessionLocal = sessionmaker(
@@ -24,6 +35,10 @@ Base = declarative_base()
 
 
 def get_db():
+    """
+    Dependency for database sessions.
+    Use with FastAPI's Depends() to get a database session.
+    """
     db = SessionLocal()
     try:
         yield db

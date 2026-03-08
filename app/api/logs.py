@@ -24,6 +24,8 @@ async def upload_logs(
     text = content.decode("utf-8", errors="ignore")
     print(f"Decoded text length: {len(text)}")
 
+
+    
     # Use the real multi‑format parser
     parsed_events = parse_logs(text)
     print(f"Parsed {len(parsed_events)} events")
