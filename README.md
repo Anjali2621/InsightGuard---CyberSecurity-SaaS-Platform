@@ -94,7 +94,7 @@ Deploying to Railway is straightforward:
    railway run python -c "from app.storage.database import Base, engine; Base.metadata.create_all(bind=engine)"
    ```
 
-7. **Open your deployed app** via the Railway URL (e.g. `https://<project>.railway.app/dashboard`).
+7. **Open your deployed app** via the Railway URL - https://web-production-12a7a.up.railway.app/dashboard
 
 Railway handles logging, environment variables, and the database for you. Enjoy!
 
