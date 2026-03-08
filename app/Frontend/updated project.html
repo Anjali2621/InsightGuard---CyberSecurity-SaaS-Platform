@@ -768,11 +768,27 @@
 
         async function loadFromBackend() {
             try {
-                const response = await fetch(API_URL + '/logs');
+                console.log('Loading from backend. API_URL:', API_URL);
+                const fullUrl = API_URL + '/logs';
+                console.log('Fetching from:', fullUrl);
+                
+                const response = await fetch(fullUrl);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    console.error('HTTP error, status:', response.status);
+                    const errorText = await response.text();
+                    console.error('Error response body:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
                 const data = await response.json();
+                console.log('Successfully fetched data:', data);
 
                 const logs = data.logs || [];
                 const totalEvents = data.total_events || logs.length;
+                
+                console.log(`Loaded ${logs.length} logs, total events: ${totalEvents}`);
 
                 const events = logs.map(log => {
                     const timestamp = log.timestamp || 'unknown';
@@ -810,10 +826,12 @@
                     return { timestamp, ip, method, endpoint, status, severity };
                 });
 
+                console.log('Rendered dashboard with', events.length, 'events');
                 // Pass total events count to renderDashboard
                 renderDashboard(events, totalEvents);
             } catch (error) {
-                console.error('Failed to load data from backend, dashboard will use local parsing instead.', error);
+                console.error('Failed to load data from backend:', error);
+                console.error('Error stack:', error.stack);
             }
         }
 
@@ -834,21 +852,28 @@
                         body: formData
                     });
                     console.log('Upload response status:', uploadResp.status);
-                    console.log('Upload response:', await uploadResp.text());
+                    
+                    const responseText = await uploadResp.text();
+                    console.log('Upload response body:', responseText);
                     
                     if (uploadResp.ok) {
                         uploaded = true;
-                        console.log('Upload successful, loading from backend...');
-                        await loadFromBackend();
+                        console.log('✅ Upload successful! Now loading from backend...');
+                        // Wait a moment for database to commit, then load
+                        setTimeout(async () => {
+                            await loadFromBackend();
+                        }, 500);
                     } else {
-                        console.error('Upload failed with status:', uploadResp.status);
+                        console.error('❌ Upload failed with status:', uploadResp.status);
+                        console.error('Response:', responseText);
                     }
                 } catch (err) {
-                    console.error('Backend upload failed:', err);
+                    console.error('❌ Backend upload failed:', err);
                 }
 
                 // Fallback: if backend is not available, keep the original local behavior.
                 if (!uploaded) {
+                    console.log('Using fallback local parsing...');
                     const lines = text.split('\n').slice(0, 50);
                     renderDashboard(lines);
                 }

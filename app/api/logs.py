@@ -53,9 +53,6 @@ async def upload_logs(
     incidents = run_detection(db)
     print(f"Created {incidents} incidents")
 
-    incidents = run_detection(db)
-    print(f"Created {incidents} incidents")
-
     return {
         "message": "Logs stored successfully",
         "events_saved": len(parsed_events),
@@ -68,26 +65,32 @@ def get_logs(db: Session = Depends(get_db)):
     """
     Return the most recent 100 log events for the dashboard, along with total count.
     """
-    # Get total count of all logs
-    total_count = db.query(LogEvent).count()
+    try:
+        # Get total count of all logs
+        total_count = db.query(LogEvent).count()
+        print(f"Total logs in database: {total_count}")
 
-    # Get the most recent 100 logs for display
-    logs = db.query(LogEvent).order_by(LogEvent.id.desc()).limit(100).all()
+        # Get the most recent 100 logs for display
+        logs = db.query(LogEvent).order_by(LogEvent.id.desc()).limit(100).all()
+        print(f"Retrieved {len(logs)} logs from database")
 
-    return {
-        "total_events": total_count,
-        "logs": [
-            {
-                "id": log.id,
-                "timestamp": log.timestamp,
-                "source": log.source,
-                "event_type": log.event_type,
-                "severity": log.severity,
-                "user": log.user,
-                "ip": log.ip,
-                "action": log.action,
-                "resource": log.resource,
-            }
-            for log in logs
-        ]
-    }
+        return {
+            "total_events": total_count,
+            "logs": [
+                {
+                    "id": log.id,
+                    "timestamp": log.timestamp,
+                    "source": log.source,
+                    "event_type": log.event_type,
+                    "severity": log.severity,
+                    "user": log.user,
+                    "ip": log.ip,
+                    "action": log.action,
+                    "resource": log.resource,
+                }
+                for log in logs
+            ]
+        }
+    except Exception as e:
+        print(f"Error in get_logs: {e}")
+        return {"error": f"Failed to retrieve logs: {str(e)}", "total_events": 0, "logs": []}
