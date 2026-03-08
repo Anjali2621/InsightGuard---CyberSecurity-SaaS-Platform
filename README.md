@@ -13,27 +13,27 @@ The platform simplifies complex cybersecurity workflows and empowers even non-ex
 
 ```
 insightguard/
-├── start.py              # 🚀 Local development startup script
-├── app/                  # 📁 Main application directory
-│   ├── main.py          # 🔧 FastAPI application & routes
-│   ├── api/             # 🌐 API endpoints
-│   │   ├── logs.py      # 📊 Log upload & retrieval
-│   │   └── incidents.py # 🚨 Incident management
-│   ├── models/          # 📋 Data models
-│   │   ├── model.py     # 🗄️ SQLAlchemy database models
-│   │   └── event.py     # 📝 Pydantic event schemas
-│   ├── detection/       # 🧠 ML & rule-based detection
-│   │   └── rules.py     # ⚡ Anomaly detection engine
-│   ├── ingestion/       # 📥 Log parsing & processing
-│   │   ├── parser.py    # 🔍 Multi-format log parser
-│   │   └── normalizer.py# 🧹 Data normalization
-│   ├── services/        # 🔧 Business logic services
-│   ├── storage/         # 💾 Database configuration
-│   │   └── database.py  # 🗃️ SQLAlchemy setup
-│   └── Frontend/        # 🎨 Static web files
-│       └── index.html   # 🌐 Dashboard UI
-├── requirements.txt     # 📦 Python dependencies
-└── README.md           # 📖 This file
+├── start.py             #  Local development startup script
+├── app/                 #  Main application directory
+│   ├── main.py          #  FastAPI application & routes
+│   ├── api/             #  API endpoints
+│   │   ├── logs.py      #  Log upload & retrieval
+│   │   └── incidents.py #  Incident management
+│   ├── models/          #  Data models
+│   │   ├── model.py     #  SQLAlchemy database models
+│   │   └── event.py     #  Pydantic event schemas
+│   ├── detection/       #  ML & rule-based detection
+│   │   └── rules.py     #  Anomaly detection engine
+│   ├── ingestion/       #  Log parsing & processing
+│   │   ├── parser.py    #  Multi-format log parser
+│   │   └── normalizer.py#  Data normalization
+│   ├── services/        #  Business logic services
+│   ├── storage/         #  Database configuration
+│   │   └── database.py  #  SQLAlchemy setup
+│   └── Frontend/        #  Static web files
+│       └── index.html   #  Dashboard UI
+├── requirements.txt     #  Python dependencies
+└── README.md            #  This file
 ```
 
 ## Quick Start
