@@ -60,6 +60,44 @@ insightguard/
    - **Dashboard**: http://127.0.0.1:8000/dashboard
    - **Health Check**: http://127.0.0.1:8000
 
+### Railway Deployment
+
+Deploying to Railway is straightforward:
+
+1. **Install Railway CLI** (optional, you can use the Web UI):
+   ```bash
+   npm install -g railway
+   railway login
+   ```
+
+2. **Initialize project** in repository root:
+   ```bash
+   railway init
+   # Select "Python" when prompted
+   ```
+
+3. **Set environment variable** for Postgres (Railway can provision one automatically):
+   ```bash
+   railway add plugin postgresql
+   ```
+   or via the web dashboard, copy the generated `DATABASE_URL`.
+
+4. **Create a Procfile** (Railway reads this for the start command):
+   ```text
+   web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   ```
+
+5. **Push code** to your Git remote and connect the repo to Railway. Each push triggers a deployment.
+
+6. **Optional:** Run migrations or seed data using `railway run`:
+   ```bash
+   railway run python -c "from app.storage.database import Base, engine; Base.metadata.create_all(bind=engine)"
+   ```
+
+7. **Open your deployed app** via the Railway URL (e.g. `https://<project>.railway.app/dashboard`).
+
+Railway handles logging, environment variables, and the database for you. Enjoy!
+
 ### Features:
 - Upload log files (.log, .txt, .csv)
 - Real-time threat analysis and anomaly detection
