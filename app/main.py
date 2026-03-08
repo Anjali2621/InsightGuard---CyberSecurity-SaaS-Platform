@@ -30,11 +30,12 @@ app.add_middleware(
 
 app.include_router(logs.router)
 app.include_router(incidents.router)
+print("Routers mounted successfully")
 
 
-@app.get("/")
-def healthcheck():
-    return {"status": "ok", "service": "InsightGuard Backend"}
+@app.get("/test")
+def test_endpoint():
+    return {"message": "API is working!", "routes": ["GET /", "GET /logs", "POST /logs/upload", "GET /dashboard"]}
 
 
 class ChatRequest(BaseModel):
