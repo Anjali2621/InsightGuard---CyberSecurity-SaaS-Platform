@@ -20,7 +20,9 @@ app = FastAPI(title="InsightGuard Backend")
 # Allow the dashboard (opened from file:// or localhost) to talk to the API.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+    "https://extraordinary-entremet-0f1664.netlify.app",  # Your Netlify URL
+    "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
