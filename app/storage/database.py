@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+import os
 
-DATABASE_URL = "postgresql://postgres:Sql2606%23@localhost:5432/InsightGuard"
+DATABASE_URL = os.getenv("postgresql://postgres:GyyeMayEezRarihHVPCyxFlNeNmDBKlK@postgres.railway.internal:5432/railway")
 
 engine = create_engine(DATABASE_URL)
 
