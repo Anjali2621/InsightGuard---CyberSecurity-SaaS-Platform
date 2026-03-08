@@ -18,29 +18,43 @@ async def upload_logs(
     Ingest a raw log file, parse it into structured events, store them,
     then run rule‑based + ML anomaly detection.
     """
+    print(f"Received file: {file.filename}, size: {len(await file.read())}")
+    await file.seek(0)  # Reset file pointer
     content = await file.read()
     text = content.decode("utf-8", errors="ignore")
+    print(f"Decoded text length: {len(text)}")
 
     # Use the real multi‑format parser
     parsed_events = parse_logs(text)
+    print(f"Parsed {len(parsed_events)} events")
 
-    for event in parsed_events:
-        db_event = LogEvent(
-            timestamp=event.timestamp,
-            source=event.source,
-            event_type=event.event_type,
-            severity=event.severity,
-            user=event.user,
-            ip=event.ip,
-            action=event.action,
-            resource=event.resource,
-            raw=event.raw,
-        )
-        db.add(db_event)
+    try:
+        for event in parsed_events:
+            db_event = LogEvent(
+                timestamp=event.timestamp,
+                source=event.source,
+                event_type=event.event_type,
+                severity=event.severity,
+                user=event.user,
+                ip=event.ip,
+                action=event.action,
+                resource=event.resource,
+                raw=event.raw,
+            )
+            db.add(db_event)
 
-    db.commit()
+        db.commit()
+        print(f"Committed {len(parsed_events)} events to database")
+    except Exception as e:
+        print(f"Database error: {e}")
+        db.rollback()
+        return {"error": f"Database error: {str(e)}"}
 
     incidents = run_detection(db)
+    print(f"Created {incidents} incidents")
+
+    incidents = run_detection(db)
+    print(f"Created {incidents} incidents")
 
     return {
         "message": "Logs stored successfully",

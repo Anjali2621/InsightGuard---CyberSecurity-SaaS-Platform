@@ -9,7 +9,11 @@ from app.api import logs, incidents
 from app.storage.database import engine
 from app.models.model import Base
 
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created successfully")
+except Exception as e:
+    print(f"Error creating database tables: {e}")
 
 app = FastAPI(title="InsightGuard Backend")
 

@@ -828,16 +828,23 @@
 
                 let uploaded = false;
                 try {
+                    console.log('Attempting to upload file:', file.name, 'to:', API_URL + '/logs/upload');
                     const uploadResp = await fetch(API_URL + '/logs/upload', {
                         method: 'POST',
                         body: formData
                     });
+                    console.log('Upload response status:', uploadResp.status);
+                    console.log('Upload response:', await uploadResp.text());
+                    
                     if (uploadResp.ok) {
                         uploaded = true;
+                        console.log('Upload successful, loading from backend...');
                         await loadFromBackend();
+                    } else {
+                        console.error('Upload failed with status:', uploadResp.status);
                     }
                 } catch (err) {
-                    console.error('Backend upload failed, falling back to local parsing.', err);
+                    console.error('Backend upload failed:', err);
                 }
 
                 // Fallback: if backend is not available, keep the original local behavior.
