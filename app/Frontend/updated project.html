@@ -766,7 +766,10 @@
         async function loadFromBackend() {
             try {
                 const response = await fetch('http://127.0.0.1:8000/logs');
-                const logs = await response.json();
+                const data = await response.json();
+
+                const logs = data.logs || [];
+                const totalEvents = data.total_events || logs.length;
 
                 const events = logs.map(log => {
                     const timestamp = log.timestamp || 'unknown';
@@ -804,7 +807,8 @@
                     return { timestamp, ip, method, endpoint, status, severity };
                 });
 
-                renderDashboard(events);
+                // Pass total events count to renderDashboard
+                renderDashboard(events, totalEvents);
             } catch (error) {
                 console.error('Failed to load data from backend, dashboard will use local parsing instead.', error);
             }
@@ -857,7 +861,7 @@
             renderDashboard(demoData);
         }
 
-        function renderDashboard(data) {
+        function renderDashboard(data, totalEventsOverride = null) {
             document.getElementById('upload-view').style.display = 'none';
             document.getElementById('results-view').style.display = 'block';
             const tbody = document.getElementById('log-table-body');
@@ -927,7 +931,8 @@
                 `;
             });
             // Update Summary Metrics based on data
-            const total = rows.length;
+            // Use totalEventsOverride if provided (from backend), otherwise use rows.length
+            const total = totalEventsOverride !== null ? totalEventsOverride : rows.length;
             const critical = critCount;
             const blocked = highRiskIps.size;
             const health = total > 0 ? 100 - (critical / total * 100) : 100;

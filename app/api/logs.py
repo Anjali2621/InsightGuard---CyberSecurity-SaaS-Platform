@@ -52,21 +52,28 @@ async def upload_logs(
 @router.get("/")
 def get_logs(db: Session = Depends(get_db)):
     """
-    Return the most recent 100 log events for the dashboard.
+    Return the most recent 100 log events for the dashboard, along with total count.
     """
+    # Get total count of all logs
+    total_count = db.query(LogEvent).count()
+
+    # Get the most recent 100 logs for display
     logs = db.query(LogEvent).order_by(LogEvent.id.desc()).limit(100).all()
 
-    return [
-        {
-            "id": log.id,
-            "timestamp": log.timestamp,
-            "source": log.source,
-            "event_type": log.event_type,
-            "severity": log.severity,
-            "user": log.user,
-            "ip": log.ip,
-            "action": log.action,
-            "resource": log.resource,
-        }
-        for log in logs
-    ]
+    return {
+        "total_events": total_count,
+        "logs": [
+            {
+                "id": log.id,
+                "timestamp": log.timestamp,
+                "source": log.source,
+                "event_type": log.event_type,
+                "severity": log.severity,
+                "user": log.user,
+                "ip": log.ip,
+                "action": log.action,
+                "resource": log.resource,
+            }
+            for log in logs
+        ]
+    }
