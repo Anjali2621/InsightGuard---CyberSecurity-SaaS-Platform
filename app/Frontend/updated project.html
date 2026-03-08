@@ -769,7 +769,8 @@
         async function loadFromBackend() {
             try {
                 console.log('Loading from backend. API_URL:', API_URL);
-                const fullUrl = API_URL + '/logs';
+                const fullUrl = '/logs';
+                
                 console.log('Fetching from:', fullUrl);
                 
                 const response = await fetch(fullUrl);
