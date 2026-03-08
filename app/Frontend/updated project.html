@@ -591,6 +591,9 @@
 
     
     <script>
+        // API Configuration - Change this to your Railway URL
+        const API_URL = 'https://insightguard-cybersecurity-saas-platform-production.up.railway.app'; // Change to your Railway URL like 'https://yourapp-production.up.railway.app'
+        
         let mainChart, riskChart, vectorChart, geoChart, protocolChart, densityChart, endpointChart, uaChart, responseChart, bandwidthChart;
         let dashboardStats = null;
 
@@ -765,7 +768,7 @@
 
         async function loadFromBackend() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/logs');
+                const response = await fetch(API_URL + '/logs');
                 const data = await response.json();
 
                 const logs = data.logs || [];
@@ -825,7 +828,7 @@
 
                 let uploaded = false;
                 try {
-                    const uploadResp = await fetch('http://127.0.0.1:8000/logs/upload', {
+                    const uploadResp = await fetch(API_URL + '/logs/upload', {
                         method: 'POST',
                         body: formData
                     });
@@ -1157,7 +1160,7 @@
             input.value = '';
             
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/chat', {
+                const response = await fetch(API_URL + '/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: message })
