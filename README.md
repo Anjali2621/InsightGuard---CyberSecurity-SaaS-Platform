@@ -9,6 +9,9 @@ Users can upload system, firewall, or application logs and InsightGuard instantl
 
 The platform simplifies complex cybersecurity workflows and empowers even non-experts to understand system threats using an intuitive dashboard and chatbot interface.
 
+<img width="1866" height="902" alt="image" src="https://github.com/user-attachments/assets/3d8620ee-43af-4704-98a6-9c7d11351c9a" />
+
+
 ## Project Structure
 
 ```
